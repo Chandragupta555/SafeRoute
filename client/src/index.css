@@ -1,0 +1,226 @@
+:root {
+  --bg-primary: #0D1B2A;
+  --bg-card: #1A0A2E;
+  --bg-card-hover: #2D1055;
+  --purple: #6828B8;
+  --purple-light: #9850D8;
+  --rose: #E8A4C0;
+  --rose-dark: #C4849A;
+  --white: #FFFFFF;
+  --gray: #94A3B8;
+  --gray-muted: #64748B;
+  --success: #166534;
+  --danger: #CC0000;
+  --warning: #92400E;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--white);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Base Buttons */
+.btn {
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  transition: all 0.2s;
+  padding: 12px 24px;
+}
+
+.btn-primary {
+  background: var(--purple);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--purple-light);
+}
+
+.btn-outline-purple {
+  background: transparent;
+  border: 2px solid var(--purple);
+  color: var(--rose);
+}
+
+.btn-outline-purple:hover {
+  background: rgba(104, 40, 184, 0.15);
+}
+
+.btn-outline-rose {
+  background: transparent;
+  border: 2px solid var(--rose);
+  color: var(--rose);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Base Inputs */
+.input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(104, 40, 184, 0.4);
+  border-radius: var(--radius-md);
+  color: white;
+  padding: 12px 16px;
+  font-size: 16px;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--rose);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.input::placeholder {
+  color: var(--gray-muted);
+}
+
+/* Base Card */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(232, 164, 192, 0.12);
+  padding: 20px;
+}
+
+/* Toasts */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: white;
+  z-index: 9999;
+}
+
+.toast-success {
+  background: #166534;
+}
+
+.toast-error {
+  background: #CC0000;
+}
+
+.toast-info {
+  background: var(--purple);
+}
+
+/* Leaflet map dark override */
+.leaflet-tile {
+  filter: brightness(0.9) contrast(1.1);
+}
+.leaflet-container {
+  background: #0D1B2A;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--bg-card);
+  color: white;
+  border: 1px solid rgba(232, 164, 192, 0.2);
+}
+
+.leaflet-popup-tip {
+  background: var(--bg-card);
+}
+
+/* Webkit scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--purple);
+  border-radius: 3px;
+}
+
+/* zoom controls */
+.leaflet-control-zoom a {
+  background: #1A0A2E !important;
+  color: #E8A4C0 !important;
+  border: 1px solid rgba(232,164,192,0.3) !important;
+  border-radius: 8px !important;
+}
+.leaflet-control-zoom a:hover {
+  background: #6828B8 !important;
+  color: #FFFFFF !important;
+}
+
+/* pulse animation for user location */
+@keyframes userPulse {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+.user-locator-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  margin-left: -12px;
+  margin-top: -12px;
+  border: 2px solid #E8A4C0;
+  border-radius: 50%;
+  background: transparent;
+  animation: userPulse 2s infinite ease-out;
+}
+
+.user-locator-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  margin-top: -5px;
+  background: #6828B8;
+  border-radius: 50%;
+}
+
+.incident-marker {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.custom-leaflet-tooltip {
+  background: #1A0A2E !important;
+  color: white !important;
+  border: 1px solid rgba(232,164,192,0.3) !important;
+  font-weight: bold;
+}
