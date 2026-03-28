@@ -25,13 +25,23 @@ router.get('/area', auth, async (req, res) => {
     };
 
     if (timeOfDay) {
-      query.timeOfDay = timeOfDay;
+      // Map the string to actual 24-hour integers since timeOfDay is just a virtual
+      let matchHours;
+      if (timeOfDay === 'morning') matchHours = [5, 6, 7, 8, 9, 10, 11];
+      else if (timeOfDay === 'afternoon') matchHours = [12, 13, 14, 15, 16, 17];
+      else if (timeOfDay === 'evening') matchHours = [18, 19, 20];
+      else if (timeOfDay === 'night') matchHours = [21, 22, 23, 0, 1, 2, 3, 4];
+
+      if (matchHours) {
+        // Use MongoDB $expr to extract the hour from the timeOfIncident Date object
+        query.$expr = { $in: [{ $hour: "$timeOfIncident" }, matchHours] };
+      }
     }
 
     const incidents = await Incident.find(query)
-      .sort({ severity: -1, reportedAt: -1 })
+      .sort({ severity: -1, timeOfIncident: -1 })
       .limit(200)
-      .select('_id location category severity timeOfDay reportedAt upvotes isVerified source');
+      .select('_id location safetyScore experienceText transportMode severity timeOfIncident upvotes isVerified source');
 
     res.json(incidents);
   } catch (error) {
@@ -40,39 +50,79 @@ router.get('/area', auth, async (req, res) => {
   }
 });
 
+// GET /api/incidents/route-experiences
+router.get('/route-experiences', auth, async (req, res) => {
+  try {
+    const { lat1, lng1, lat2, lng2, mode } = req.query;
+
+    if (!lat1 || !lng1 || !lat2 || !lng2) {
+      return res.status(400).json({ error: 'Start and end coordinates required.' });
+    }
+
+    const minLat = Math.min(Number(lat1), Number(lat2)) - 0.005;
+    const maxLat = Math.max(Number(lat1), Number(lat2)) + 0.005;
+    const minLng = Math.min(Number(lng1), Number(lng2)) - 0.005;
+    const maxLng = Math.max(Number(lng1), Number(lng2)) + 0.005;
+
+    const query = {
+      location: {
+        $geoWithin: {
+          $box: [
+            [minLng, minLat],
+            [maxLng, maxLat]
+          ]
+        }
+      }
+    };
+
+    if (mode) {
+      query.transportMode = mode;
+    }
+
+    const experiences = await Incident.find(query)
+      .sort({ timeOfIncident: -1 })
+      .limit(50)
+      .select('_id location safetyScore experienceText transportMode timeOfIncident upvotes isVerified isAnonymous source');
+
+    res.json(experiences);
+  } catch (error) {
+    console.error('Error fetching route experiences:', error);
+    res.status(500).json({ error: 'Server error fetching route experiences' });
+  }
+});
+
 // POST /api/incidents
 router.post('/', auth, async (req, res) => {
   try {
-    const { latitude, longitude, category, severity, description, isAnonymous } = req.body;
-    let { reportedAt } = req.body;
+    const { latitude, longitude, safetyScore, experienceText, transportMode, severity, isAnonymous, timeOfIncident } = req.body;
 
     // Validations
-    const validCategories = ['harassment', 'theft', 'assault', 'unsafe_area', 'poor_lighting', 'other'];
-    if (!validCategories.includes(category)) {
-      return res.status(400).json({ error: 'Invalid category' });
-    }
-
-    if (![1, 2, 3].includes(Number(severity))) {
-      return res.status(400).json({ error: 'Severity must be 1, 2, or 3' });
-    }
-
     if (!latitude || !longitude) {
       return res.status(400).json({ error: 'Latitude and longitude are required' });
     }
 
-    reportedAt = reportedAt ? new Date(reportedAt) : new Date();
-    
-    // Create new incident (pre-save hook automatically calculates timeOfDay based on reportedAt)
+    const validModes = ['walking', 'auto', 'cab', 'bus', 'bike'];
+    if (!validModes.includes(transportMode)) {
+      return res.status(400).json({ error: 'Invalid transport mode' });
+    }
+
+    if (safetyScore < 1 || safetyScore > 10) {
+      return res.status(400).json({ error: 'Safety score must be between 1 and 10' });
+    }
+
+    const parseTime = timeOfIncident ? new Date(timeOfIncident) : new Date();
+
     const newIncident = new Incident({
       location: {
         type: 'Point',
         coordinates: [Number(longitude), Number(latitude)]
       },
-      category,
-      severity: Number(severity),
-      description,
+      safetyScore: Number(safetyScore),
+      experienceText,
+      transportMode,
+      severity: Number(severity || 2),
       isAnonymous: isAnonymous !== undefined ? isAnonymous : true,
-      reportedAt,
+      timeOfIncident: parseTime,
       source: 'user'
     });
 

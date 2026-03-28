@@ -13,9 +13,19 @@ const incidentSchema = new mongoose.Schema({
       required: true
     }
   },
-  category: {
+  safetyScore: {
+    type: Number,
+    min: 1,
+    max: 10,
+    required: true
+  },
+  experienceText: {
     type: String,
-    enum: ['harassment', 'theft', 'assault', 'unsafe_area', 'poor_lighting', 'other'],
+    maxlength: 500
+  },
+  transportMode: {
+    type: String,
+    enum: ['walking', 'auto', 'cab', 'bus', 'bike'],
     required: true
   },
   severity: {
@@ -24,17 +34,9 @@ const incidentSchema = new mongoose.Schema({
     max: 3,
     required: true
   },
-  description: {
-    type: String,
-    maxlength: 300
-  },
-  reportedAt: {
+  timeOfIncident: {
     type: Date,
-    default: Date.now
-  },
-  timeOfDay: {
-    type: String,
-    enum: ['morning', 'afternoon', 'evening', 'night']
+    required: true
   },
   isVerified: {
     type: Boolean,
@@ -57,25 +59,28 @@ const incidentSchema = new mongoose.Schema({
 
 // Indexes
 incidentSchema.index({ location: '2dsphere' });
-incidentSchema.index({ reportedAt: -1, severity: -1 });
+incidentSchema.index({ timeOfIncident: -1, severity: -1 });
 
-// Pre-save middleware to auto-calculate timeOfDay based on reportedAt hour
-incidentSchema.pre('save', function(next) {
-  if (this.reportedAt) {
-    const hour = this.reportedAt.getHours();
-    
-    // morning: 5-11, afternoon: 12-17, evening: 18-20, night: 21-4
-    if (hour >= 5 && hour < 12) {
-      this.timeOfDay = 'morning';
-    } else if (hour >= 12 && hour < 18) {
-      this.timeOfDay = 'afternoon';
-    } else if (hour >= 18 && hour < 21) {
-      this.timeOfDay = 'evening';
-    } else {
-      this.timeOfDay = 'night';
-    }
-  }
-  next();
+// Virtuals
+incidentSchema.virtual('timeOfDay').get(function() {
+  if (!this.timeOfIncident) return 'night';
+  const hour = this.timeOfIncident.getHours();
+  if (hour >= 5 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 18) return 'afternoon';
+  if (hour >= 18 && hour < 21) return 'evening';
+  return 'night';
 });
+
+incidentSchema.virtual('riskWeight').get(function() {
+  let multiplier = 1.0;
+  if (this.safetyScore <= 3) multiplier = 2.0;
+  else if (this.safetyScore <= 6) multiplier = 1.5;
+  
+  return (11 - this.safetyScore) * multiplier;
+});
+
+// Configure JSON serialization to include virtuals
+incidentSchema.set('toJSON', { virtuals: true });
+incidentSchema.set('toObject', { virtuals: true });
 
 module.exports = mongoose.model('Incident', incidentSchema);

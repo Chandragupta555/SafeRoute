@@ -48,72 +48,70 @@ const generateIncidents = () => {
   const incidents = [];
   const stats = {
     sector: {},
-    category: {},
+    safetyScore: { '2-4': 0, '4-6': 0, '7-9': 0 },
+    transportMode: {},
     severity: { 1: 0, 2: 0, 3: 0 }
   };
 
-  const addIncident = (centerName, lat, lng, category, severity, timeOfDay) => {
+  const addIncident = (centerName, lat, lng, safetyScore, transportMode, severity, timeOfIncident) => {
     stats.sector[centerName] = (stats.sector[centerName] || 0) + 1;
-    stats.category[category] = (stats.category[category] || 0) + 1;
+    
+    let scoreBracket = '7-9';
+    if (safetyScore <= 4) scoreBracket = '2-4';
+    else if (safetyScore <= 6) scoreBracket = '4-6';
+    stats.safetyScore[scoreBracket]++;
+    
+    stats.transportMode[transportMode] = (stats.transportMode[transportMode] || 0) + 1;
     stats.severity[severity]++;
 
     incidents.push({
-      category,
+      safetyScore,
+      transportMode,
       severity,
       location: {
         type: 'Point',
         coordinates: [lng + randOffset(), lat + randOffset()]
       },
-      timeOfDay,
+      experienceText: pick([
+        'Felt very uncomfortable walking here.',
+        'Not well lit at all.',
+        'Had a sketchy encounter, definitely avoid.',
+        'Felt perfectly fine.',
+        'Regular route for me, pretty crowded.',
+        'Cars drive way too fast but otherwise safe.'
+      ], [0.2, 0.2, 0.15, 0.2, 0.15, 0.1]),
       description: '',
-      reportedAt: randDate(60),
+      timeOfIncident,
       isVerified: Math.random() < 0.85,
       upvotes: randInt(3, 18),
       source: 'ncrb_seed'
     });
   };
 
-  // Sector 17 (25 incidents) — busy market, daytime harassment common
+  const getSafetyScore = () => pick([randInt(2, 4), randInt(4, 6), randInt(7, 9)], [0.40, 0.35, 0.25]);
+  const getTransportMode = () => pick(['walking', 'auto', 'bus', 'cab', 'bike'], [0.5, 0.2, 0.15, 0.1, 0.05]);
+
+  // Sector 17
   for (let i = 0; i < 25; i++) {
-    const cat = pick(['harassment', 'theft', 'unsafe_area'], [0.5, 0.3, 0.2]);
-    const time = pick(['afternoon', 'evening', 'night'], [0.3, 0.3, 0.4]);
-    const sev = pick([1, 2], [0.6, 0.4]);
-    addIncident('Sector 17', centers.sec17.lat, centers.sec17.lng, cat, sev, time);
+    addIncident('Sector 17', centers.sec17.lat, centers.sec17.lng, getSafetyScore(), getTransportMode(), pick([1, 2], [0.6, 0.4]), randDate(60));
   }
-
-  // Sector 22 (20 incidents) — high risk at night
+  // Sector 22
   for (let i = 0; i < 20; i++) {
-    const cat = pick(['harassment', 'assault', 'theft', 'unsafe_area'], [0.4, 0.2, 0.3, 0.1]);
-    const time = pick(['night', 'evening'], [0.7, 0.3]);
-    const sev = pick([2, 3], [0.6, 0.4]);
-    addIncident('Sector 22', centers.sec22.lat, centers.sec22.lng, cat, sev, time);
+    addIncident('Sector 22', centers.sec22.lat, centers.sec22.lng, getSafetyScore(), getTransportMode(), pick([2, 3], [0.6, 0.4]), randDate(60));
   }
-
-  // Railway Station area (20 incidents) — isolated at night
+  // Railway Station
   for (let i = 0; i < 20; i++) {
-    const cat = pick(['theft', 'harassment', 'assault'], [0.4, 0.35, 0.25]);
-    const time = pick(['night', 'evening'], [0.65, 0.35]);
-    const sev = pick([2, 3], [0.5, 0.5]);
-    addIncident('Railway Station', centers.railway.lat, centers.railway.lng, cat, sev, time);
+    addIncident('Railway Station', centers.railway.lat, centers.railway.lng, getSafetyScore(), getTransportMode(), pick([2, 3], [0.5, 0.5]), randDate(60));
   }
-
-  // Manimajra (15 incidents) — border area, higher severity
+  // Manimajra
   for (let i = 0; i < 15; i++) {
-    const cat = pick(['assault', 'harassment', 'unsafe_area'], [0.3, 0.3, 0.4]);
-    const time = pick(['night', 'evening', 'afternoon'], [0.75, 0.15, 0.1]);
-    const sev = 3;
-    addIncident('Manimajra', centers.manimajra.lat, centers.manimajra.lng, cat, sev, time);
+    addIncident('Manimajra', centers.manimajra.lat, centers.manimajra.lng, getSafetyScore(), getTransportMode(), 3, randDate(60));
   }
-
-  // Industrial Area Phase 1 (15 incidents) — poor lighting, isolated roads
+  // Industrial Area
   for (let i = 0; i < 15; i++) {
-    const cat = pick(['poor_lighting', 'unsafe_area', 'harassment'], [0.4, 0.35, 0.25]);
-    const time = pick(['night', 'evening'], [0.8, 0.2]);
-    const sev = 2;
-    addIncident('Industrial Area', centers.industrial.lat, centers.industrial.lng, cat, sev, time);
+    addIncident('Industrial Area', centers.industrial.lat, centers.industrial.lng, getSafetyScore(), getTransportMode(), 2, randDate(60));
   }
-
-  // Remaining sectors (55 incidents) — spread across Sector 35, 43, 11, 52, 15
+  // Remaining areas
   const remLocs = [
     { n: 'Sector 15', c: centers.sec15 },
     { n: 'Sector 35', c: centers.sec35 },
@@ -121,13 +119,9 @@ const generateIncidents = () => {
     { n: 'Sector 11', c: centers.sec11 },
     { n: 'Sector 52', c: centers.sec52 }
   ];
-
   for (let i = 0; i < 55; i++) {
     const loc = remLocs[i % 5];
-    const cat = pick(['harassment', 'theft', 'poor_lighting', 'unsafe_area'], [0.25, 0.25, 0.25, 0.25]);
-    const time = pick(['morning', 'afternoon', 'evening', 'night'], [0.1, 0.2, 0.3, 0.4]);
-    const sev = pick([1, 2], [0.5, 0.5]);
-    addIncident(loc.n, loc.c.lat, loc.c.lng, cat, sev, time);
+    addIncident(loc.n, loc.c.lat, loc.c.lng, getSafetyScore(), getTransportMode(), pick([1, 2], [0.5, 0.5]), randDate(60));
   }
 
   return { incidents, stats };
@@ -151,8 +145,11 @@ async function seed() {
     console.log('Sector Distribution:');
     console.table(stats.sector);
     
-    console.log('Category Distribution:');
-    console.table(stats.category);
+    console.log('Safety Score Distribution:');
+    console.table(stats.safetyScore);
+    
+    console.log('Transport Mode Distribution:');
+    console.table(stats.transportMode);
     
     console.log('Severity Distribution:');
     console.table(stats.severity);
