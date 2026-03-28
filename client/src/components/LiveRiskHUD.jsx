@@ -110,7 +110,7 @@ export default function LiveRiskHUD({ score, isSimulating, transportMode = 'walk
             <div style={{ width: `${w1}%`, height: '100%', background: '#6828B8', borderRadius: '2px', transition: 'width 0.6s ease' }}></div>
           </div>
           <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
-            <div style={{ width: `${w2}%`, height: '100%', background: '#F59E0B', borderRadius: '2px', transition: 'width 0.6s ease' }}></div>
+            <div style={{ width: `${w2}%`, height: '100%', background: '#f7d519', borderRadius: '2px', transition: 'width 0.6s ease' }}></div>
           </div>
           <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
             <div style={{ width: `${w3}%`, height: '100%', background: '#EF4444', borderRadius: '2px', transition: 'width 0.6s ease' }}></div>

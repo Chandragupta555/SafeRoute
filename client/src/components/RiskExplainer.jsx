@@ -74,7 +74,7 @@ export default function RiskExplainer({ isOpen, onClose, routeStats, locationCoo
           </div>
           <div>
             <div style={{ fontSize: '13px', color: '#94A3B8', marginBottom: '4px' }}>Factor 4: Time of day</div>
-            {renderBar(factors.timeRisk, '#F59E0B')}
+            {renderBar(factors.timeRisk, '#f7d519')}
           </div>
           <div>
             <div style={{ fontSize: '13px', color: '#94A3B8', marginBottom: '4px' }}>Factor 5: Incident density</div>

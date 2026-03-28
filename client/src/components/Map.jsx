@@ -157,23 +157,23 @@ export default function Map({ incidents = [], userPosition, originCoords, destin
       let iconHtml = '';
       let iconSize = 10;
       let anchor = 5;
-      let color = '#F59E0B';
+      let color = '#f7d519';
 
       if (incident.severity === 3) {
         iconSize = 18;
         anchor = 9;
-        color = '#9E3060';
-        iconHtml = `<div style="width: 18px; height: 18px; background: #9E3060; border-radius: 50%; opacity: 0.9; box-shadow: 0 0 0 4px rgba(158,48,96,0.3);"></div>`;
+        color = '#f00b0b';
+        iconHtml = `<div style="width: 18px; height: 18px; background: #f00b0b; border-radius: 50%; opacity: 0.9; box-shadow: 0 0 0 4px rgba(158,48,96,0.3);"></div>`;
       } else if (incident.severity === 2) {
         iconSize = 14;
         anchor = 7;
-        color = '#EA580C';
-        iconHtml = `<div style="width: 14px; height: 14px; background: #EA580C; border-radius: 50%; opacity: 0.85;"></div>`;
+        color = '#f37f13';
+        iconHtml = `<div style="width: 14px; height: 14px; background: #f37f13; border-radius: 50%; opacity: 0.85;"></div>`;
       } else {
         iconSize = 10;
         anchor = 5;
-        color = '#F59E0B';
-        iconHtml = `<div style="width: 10px; height: 10px; background: #F59E0B; border-radius: 50%; opacity: 0.8;"></div>`;
+        color = '#f7d519';
+        iconHtml = `<div style="width: 10px; height: 10px; background: #f7d519; border-radius: 50%; opacity: 0.8;"></div>`;
       }
 
       const customIcon = L.divIcon({
@@ -210,9 +210,9 @@ export default function Map({ incidents = [], userPosition, originCoords, destin
         max: 1.0,
         gradient: {
           0.4: '#FCD34D', // Amber/Yellow
-          0.6: '#EA580C', // Orange
+          0.6: '#f37f13', // Orange
           0.8: '#CC0000', // Red
-          1.0: '#9E3060'  // Purple/Dark Rose
+          1.0: '#f00b0b'  // Purple/Dark Rose
         }
       }).addTo(mapInstanceRef.current);
     }
@@ -289,7 +289,7 @@ export default function Map({ incidents = [], userPosition, originCoords, destin
       </div>
 
       {/* Map Legend */}
-      {/* <div style={{
+      <div style={{
         position: 'absolute',
         bottom: '20px',
         left: '16px',
@@ -306,20 +306,20 @@ export default function Map({ incidents = [], userPosition, originCoords, destin
         <div style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 'bold', marginBottom: '4px' }}>Risk Levels</div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '12px', height: '12px', background: '#9E3060', borderRadius: '50%' }}></div>
-          <span style={{ color: 'white', fontSize: '12px' }}>High Risk (Assault/Theft)</span>
+          <div style={{ width: '12px', height: '12px', background: '#f00b0b', borderRadius: '50%' }}></div>
+          <span style={{ color: 'white', fontSize: '12px' }}>High Risk </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '12px', height: '12px', background: '#EA580C', borderRadius: '50%' }}></div>
-          <span style={{ color: 'white', fontSize: '12px' }}>Medium Risk (Harassment)</span>
+          <div style={{ width: '12px', height: '12px', background: '#f37f13', borderRadius: '50%' }}></div>
+          <span style={{ color: 'white', fontSize: '12px' }}>Medium Risk </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '12px', height: '12px', background: '#F59E0B', borderRadius: '50%' }}></div>
-          <span style={{ color: 'white', fontSize: '12px' }}>Caution (Poor Lighting)</span>
+          <div style={{ width: '12px', height: '12px', background: '#f7d519', borderRadius: '50%' }}></div>
+          <span style={{ color: 'white', fontSize: '12px' }}>Caution </span>
         </div>
-      </div> */}
+      </div>
     </div>
   );
 }

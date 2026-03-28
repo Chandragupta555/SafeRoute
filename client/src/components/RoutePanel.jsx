@@ -32,7 +32,7 @@ export default function RoutePanel({ safeRoute, fastestRoute, transportMode = 'w
         </button>
       </div>
       <div style={{ 
-        color: route.label === 'Safe' ? '#166534' : route.label === 'Moderate' ? '#EA580C' : '#CC0000',
+        color: route.label === 'Safe' ? '#166534' : route.label === 'Moderate' ? '#f37f13' : '#CC0000',
         fontWeight: 'bold', fontSize: '14px', marginBottom: '12px', marginTop: '4px'
       }}>
         {route.label}
