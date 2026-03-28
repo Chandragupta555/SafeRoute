@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { sosAPI } from '../utils/api';
 
-export default function SOSButton({ userPosition }) {
+export default function SOSButton({ userPosition, onSOSTriggered }) {
   const [state, setState] = useState('idle');
   const [countdown, setCountdown] = useState(null);
   const [toast, setToast] = useState('');
@@ -45,6 +45,10 @@ export default function SOSButton({ userPosition }) {
       setToast('Waiting for location data...');
       setTimeout(() => setToast(''), 3000);
       return;
+    }
+
+    if (onSOSTriggered) {
+      onSOSTriggered();
     }
 
     setState('sending');

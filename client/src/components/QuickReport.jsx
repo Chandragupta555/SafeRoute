@@ -99,11 +99,11 @@ export default function QuickReport({ isOpen, onClose, locationCoords }) {
   };
 
   const modes = [
-    { id: 'walking', icon: '🚶', label: 'Walk' },
-    { id: 'bus', icon: '🚌', label: 'Bus' },
-    { id: 'auto', icon: '🛺', label: 'Auto' },
-    { id: 'cab', icon: '🚗', label: 'Cab' },
-    { id: 'bike', icon: '🚲', label: 'Bike' }
+    { id: 'walking', icon: 'bi-person-walking', label: 'Walk' },
+    { id: 'bus',     icon: 'bi-bus-front',      label: 'Bus'  },
+    { id: 'auto',    icon: 'bi-taxi-front',     label: 'Auto' },
+    { id: 'cab',     icon: 'bi-car-front',      label: 'Cab'  },
+    { id: 'bike',    icon: 'bi-bicycle',        label: 'Bike' },
   ];
 
   return (
@@ -143,7 +143,9 @@ export default function QuickReport({ isOpen, onClose, locationCoords }) {
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', transition: 'all 0.2s'
                 }}>
-                  <div style={{ fontSize: '24px', marginBottom: '4px' }}>{m.icon}</div>
+                  <div style={{ marginBottom: '4px' }}>
+                    <i className={`bi ${m.icon}`} style={{ fontSize: '22px', color: isSel ? '#E8A4C0' : '#94A3B8', transition: 'color 0.2s' }}></i>
+                  </div>
                   <div style={{ color: isSel ? 'white' : '#94A3B8', fontSize: '11px', fontWeight: 'bold' }}>{m.label}</div>
                 </div>
               );

@@ -11,6 +11,11 @@ import { incidentsAPI } from '../utils/api';
 import { fetchRoutes, selectBestRoutes } from '../utils/routing';
 import { useAuth } from '../context/AuthContext';
 import L from 'leaflet';
+import JourneySimulator from '../components/JourneySimulator';
+import AlertBanner from '../components/AlertBanner';
+import LiveRiskHUD from '../components/LiveRiskHUD';
+import { createWomanMarker, updateWomanMarker } from '../components/WomanMarker';
+import { safeZones } from '../data/safeZonesChandigarh';
 
 const OfflineBanner = () => (!navigator.onLine ? (
   <div style={{ background: '#CC0000', color: 'white', textAlign: 'center', padding: '8px', zIndex: 1000, position: 'relative', fontSize: '14px', fontWeight: 'bold' }}>
@@ -37,6 +42,14 @@ export default function MapPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mapInstance, setMapInstance] = useState(null);
   const [toast, setToast] = useState('');
+
+  // Simulation State Hooks
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationPosition, setSimulationPosition] = useState(null);
+  const [activeAlert, setActiveAlert] = useState(null);
+  const [liveRiskScore, setLiveRiskScore] = useState(100);
+  const womanMarkerRef = useRef(null);
+  const simulatorRef = useRef(null);
 
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -189,6 +202,71 @@ export default function MapPage() {
     setSelectedTimeOfDay(timeCategory);
   };
 
+  // --- SIMULATION HANDLERS ---
+  const handlePositionUpdate = (lat, lng, bearing) => {
+    setSimulationPosition({ lat, lng, bearing });
+    if (!mapInstance) return;
+
+    if (womanMarkerRef.current) {
+      updateWomanMarker(womanMarkerRef.current, lat, lng, bearing);
+    } else {
+      const icon = createWomanMarker(bearing);
+      womanMarkerRef.current = L.marker([lat, lng], { icon, zIndexOffset: 2000 }).addTo(mapInstance);
+    }
+    mapInstance.panTo([lat, lng], { animate: true, duration: 0.5 });
+  };
+
+  const handleScoreUpdate = (score) => {
+    setLiveRiskScore(score);
+  };
+
+  const handleAlertChange = (alert) => {
+    setActiveAlert(alert);
+    if (alert?.type === 'arrived') {
+      setTimeout(() => setIsSimulating(false), 2000);
+    }
+  };
+
+  const handleSimulationEnd = () => {
+    setIsSimulating(false);
+    if (womanMarkerRef.current && mapInstance) {
+      mapInstance.removeLayer(womanMarkerRef.current);
+      womanMarkerRef.current = null;
+    }
+    if (mapInstance) {
+      mapInstance.dragging.enable();
+    }
+  };
+
+  // ADD THIS FUNCTION
+  const handleManualEndJourney = () => {
+    setActiveAlert(null); // This is what finally hides the "Journey Complete" pop-up
+    handleSimulationEnd(); // Clean up the map
+    if (mapInstance) {
+      mapInstance.setZoom(14); // Reset to city view
+    }
+  };
+
+  const handleStartSimulation = () => {
+    setIsSimulating(true);
+    setActiveAlert(null);
+    setLiveRiskScore(100);
+    setSimulationPosition(null);
+    setIsRoutePanelOpen(false);
+  };
+
+  useEffect(() => {
+    if (!mapInstance) return;
+    if (isSimulating) {
+      mapInstance.dragging.disable();
+      mapInstance.setZoom(16);
+    } else {
+      mapInstance.dragging.enable();
+      mapInstance.setZoom(14);
+    }
+  }, [isSimulating, mapInstance]);
+  // -------------------------
+
   return (
     <div style={{ backgroundColor: '#0D1B2A', height: '100vh', width: '100%', position: 'relative', overflow: 'hidden' }}>
       <OfflineBanner />
@@ -237,6 +315,32 @@ export default function MapPage() {
         <Map incidents={filteredIncidents} userPosition={userPosition} originCoords={originCoords} destinationCoords={destinationCoords} onMapReady={setMapInstance} />
       </div>
 
+      <AlertBanner
+        alert={activeAlert}
+        clearAlert={() => setActiveAlert(null)}
+        onReport={() => setIsQuickReportOpen(true)}
+        onEndJourney={handleManualEndJourney} // Point to the new manual handler
+      />
+
+      <LiveRiskHUD
+        score={liveRiskScore}
+        isSimulating={isSimulating}
+        transportMode={transportMode}
+      />
+
+      <JourneySimulator
+        ref={simulatorRef}
+        routeCoordinates={routes.safeRoute?.coordinates}
+        incidents={incidents}
+        safeZones={safeZones}
+        onPositionUpdate={handlePositionUpdate}
+        onAlertChange={handleAlertChange}
+        onScoreUpdate={handleScoreUpdate}
+        onSimulationEnd={handleSimulationEnd}
+        transportMode={transportMode}
+        isActive={isSimulating}
+      />
+
       {/* Floating Action Buttons */}
       <div style={{ position: 'absolute', top: '280px', right: '20px', zIndex: 500, display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <button
@@ -269,10 +373,13 @@ export default function MapPage() {
       />
 
       {/* FIX: Use the logic-heavy SOS button component */}
-      <SOSButton userPosition={userPosition} />
+      <SOSButton
+        userPosition={userPosition}
+        onSOSTriggered={() => simulatorRef.current?.pause()}
+      />
 
       {isRoutePanelOpen && (
-        <RoutePanel safeRoute={routes.safeRoute} fastestRoute={routes.fastestRoute} transportMode={transportMode} onSelectRoute={handleSelectRoute} onClose={() => setIsRoutePanelOpen(false)} />
+        <RoutePanel safeRoute={routes.safeRoute} fastestRoute={routes.fastestRoute} transportMode={transportMode} onSelectRoute={handleSelectRoute} onSimulateJourney={handleStartSimulation} onClose={() => setIsRoutePanelOpen(false)} />
       )}
     </div>
   );

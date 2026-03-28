@@ -87,11 +87,11 @@ export default function RouteInputPanel({ onSearch, onModeChange, isGpsActive = 
   };
 
   const transportModes = [
-    { id: 'walking', icon: '🚶', label: 'Walk' },
-    { id: 'auto', icon: '🛺', label: 'Auto' },
-    { id: 'bus', icon: '🚌', label: 'Bus' },
-    { id: 'cab', icon: '🚗', label: 'Cab' },
-    { id: 'bike', icon: '🚲', label: 'Bike' }
+    { id: 'walking', icon: 'bi-person-walking', label: 'Walk' },
+    { id: 'auto', icon: 'bi-taxi-front', label: 'Auto' },
+    { id: 'bus', icon: 'bi-bus-front', label: 'Bus' },
+    { id: 'cab', icon: 'bi-car-front', label: 'Cab' },
+    { id: 'bike', icon: 'bi-bicycle', label: 'Bike' }
   ];
 
   const isSearchReady = destCoords !== null && (originCoords !== null || isGpsActive);
@@ -338,7 +338,9 @@ export default function RouteInputPanel({ onSearch, onModeChange, isGpsActive = 
                   flexShrink: 0
                 }}
               >
-                <div style={{ fontSize: '20px', marginBottom: '2px' }}>{mode.icon}</div>
+                <div style={{ marginBottom: '2px' }}>
+                  <i className={`bi ${mode.icon}`} style={{ fontSize: '18px', color: isSelected ? '#E8A4C0' : '#94A3B8', transition: 'color 0.2s' }}></i>
+                </div>
                 <div style={{ fontSize: '11px', color: isSelected ? '#E8A4C0' : '#94A3B8', fontWeight: isSelected ? 'bold' : 'normal' }}>{mode.label}</div>
               </div>
             );

@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import RiskExplainer from './RiskExplainer';
 
-export default function RoutePanel({ safeRoute, fastestRoute, transportMode = 'walking', onSelectRoute, onClose }) {
+export default function RoutePanel({ safeRoute, fastestRoute, transportMode = 'walking', onSelectRoute, onSimulateJourney, onClose }) {
   const [explainerRoute, setExplainerRoute] = useState(null);
   if (!safeRoute || !fastestRoute) return null;
 
   const modeData = {
-    walking: { icon: '🚶', name: 'Walking', tip: 'Tip: Stay on lit roads — your route avoids the darkest zones' },
-    bike: { icon: '🚲', name: 'Bike', tip: 'Tip: Stick to the left lanes and monitor traffic signals carefully' },
-    auto: { icon: '🛺', name: 'Auto', tip: 'Tip: Share your auto number plate with a trusted contact' },
-    cab: { icon: '🚗', name: 'Cab', tip: 'Tip: Share your cab number plate with a trusted contact' },
-    bus: { icon: '🚌', name: 'Bus', tip: 'Tip: ISBT Sector 43 and all major stops are on your route' }
+    walking: { icon: <i className="bi bi-person-walking"></i>, name: 'Walking', tip: 'Tip: Stay on lit roads — your route avoids the darkest zones' },
+    bike: { icon: <i className="bi bi-bicycle"></i>, name: 'Bike', tip: 'Tip: Stick to the left lanes and monitor traffic signals carefully' },
+    auto: { icon: <i className="bi bi-taxi-front"></i>, name: 'Auto', tip: 'Tip: Share your auto number plate with a trusted contact' },
+    cab: { icon: <i className="bi bi-car-front"></i>, name: 'Cab', tip: 'Tip: Share your cab number plate with a trusted contact' },
+    bus: { icon: <i className="bi bi-bus-front"></i>, name: 'Bus', tip: 'Tip: ISBT Sector 43 and all major stops are on your route' }
   };
   const activeMode = modeData[transportMode] || modeData.walking;
 
@@ -116,6 +116,13 @@ export default function RoutePanel({ safeRoute, fastestRoute, transportMode = 'w
           </button>
         )}
       </div>
+
+      <button 
+        style={{ width: '100%', marginTop: '12px', padding: '14px', background: '#E8A4C0', border: 'none', color: '#0D1B2A', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+        onClick={onSimulateJourney}
+      >
+        <span>▶</span> Simulate Journey
+      </button>
 
       <div style={{ marginTop: '16px', background: 'rgba(232,164,192,0.1)', borderLeft: '3px solid #E8A4C0', padding: '10px 14px', borderRadius: '0 8px 8px 0', color: '#E8A4C0', fontSize: '13px', fontWeight: 'bold' }}>
         {activeMode.tip}
