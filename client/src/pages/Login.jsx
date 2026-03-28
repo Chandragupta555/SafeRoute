@@ -18,7 +18,8 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      await login({ email, password });
+      const response = await login({ email, password });
+      localStorage.setItem('token', response.token);
       navigate('/map');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to sign in. Please try again.');

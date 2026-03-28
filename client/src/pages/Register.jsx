@@ -38,7 +38,8 @@ export default function Register() {
     setIsLoading(true);
     
     try {
-      await register(formData);
+      const response = await register(formData);
+      localStorage.setItem('token', response.token);
       navigate('/map');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to register. Please try again.');

@@ -5,6 +5,8 @@ import RoutePanel from '../components/RoutePanel';
 import RouteInputPanel from '../components/RouteInputPanel';
 import TimeFilter, { getCategoryFromHour } from '../components/TimeFilter';
 import SOSButton from '../components/SOSButton';
+import QuickReport from '../components/QuickReport';
+import ExperienceFeed from '../components/ExperienceFeed';
 import { incidentsAPI } from '../utils/api';
 import { fetchRoutes, selectBestRoutes } from '../utils/routing';
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +30,8 @@ export default function MapPage() {
   const recalculateTimeoutRef = useRef(null);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [isRoutePanelOpen, setIsRoutePanelOpen] = useState(false);
+  const [isExperienceFeedOpen, setIsExperienceFeedOpen] = useState(false);
+  const [isQuickReportOpen, setIsQuickReportOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [mapInstance, setMapInstance] = useState(null);
   const [toast, setToast] = useState('');
@@ -227,7 +231,35 @@ export default function MapPage() {
         <Map incidents={filteredIncidents} userPosition={userPosition} originCoords={originCoords} destinationCoords={destinationCoords} onMapReady={setMapInstance} />
       </div>
 
+      {/* Floating Action Buttons */}
+      <div style={{ position: 'absolute', top: '250px', right: '16px', zIndex: 500, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <button 
+          onClick={() => setIsExperienceFeedOpen(true)}
+          style={{ background: '#1A0A2E', color: 'white', border: '1px solid #6828B8', padding: '10px 14px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', cursor: 'pointer', fontWeight: 'bold' }}>
+          <span style={{ fontSize: '16px' }}>💬</span> Community Feed
+        </button>
+        <button 
+          onClick={() => setIsQuickReportOpen(true)}
+          style={{ background: '#1A0A2E', color: '#E8A4C0', border: '1px solid #E8A4C0', padding: '10px 14px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', cursor: 'pointer', fontWeight: 'bold' }}>
+          <span style={{ fontSize: '16px' }}>⚠️</span> Report Vibe
+        </button>
+      </div>
+
       <TimeFilter onTimeChange={handleTimeChange} />
+
+      <QuickReport 
+        isOpen={isQuickReportOpen} 
+        onClose={() => setIsQuickReportOpen(false)} 
+        locationCoords={originCoords || { lat: userPosition?.[0] || 30.7333, lng: userPosition?.[1] || 76.7794 }} 
+      />
+      
+      <ExperienceFeed 
+        isOpen={isExperienceFeedOpen} 
+        onClose={() => setIsExperienceFeedOpen(false)}
+        originCoords={originCoords || { lat: userPosition?.[0] || 30.7333, lng: userPosition?.[1] || 76.7794 }}
+        destCoords={destinationCoords || { lat: 30.7333, lng: 76.7794 }}
+        onReport={() => setIsQuickReportOpen(true)}
+      />
 
       {/* FIX: Use the logic-heavy SOS button component */}
       <SOSButton userPosition={userPosition} />
