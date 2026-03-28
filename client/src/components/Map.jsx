@@ -38,7 +38,8 @@ export default function Map({ incidents = [], userPosition, originCoords, destin
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
       // CartoDB dark theme tiles
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      // L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains: 'abcd',
         maxZoom: 19
@@ -255,8 +256,8 @@ export default function Map({ incidents = [], userPosition, originCoords, destin
       {/* Settings Toggle Floating Panel */}
       <div style={{
         position: 'absolute',
-        top: '250px',
-        right: '16px',
+        bottom: '200px',
+        left: '20px',
         zIndex: 1000,
         background: '#1A0A2E',
         padding: '12px 16px',
@@ -288,7 +289,7 @@ export default function Map({ incidents = [], userPosition, originCoords, destin
       </div>
 
       {/* Map Legend */}
-      <div style={{
+      {/* <div style={{
         position: 'absolute',
         bottom: '20px',
         left: '16px',
@@ -318,7 +319,7 @@ export default function Map({ incidents = [], userPosition, originCoords, destin
           <div style={{ width: '12px', height: '12px', background: '#F59E0B', borderRadius: '50%' }}></div>
           <span style={{ color: 'white', fontSize: '12px' }}>Caution (Poor Lighting)</span>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

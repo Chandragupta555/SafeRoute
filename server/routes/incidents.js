@@ -91,6 +91,38 @@ router.get('/route-experiences', auth, async (req, res) => {
   }
 });
 
+// GET /api/incidents/count
+router.get('/count', auth, async (req, res) => {
+  try {
+    const { lat, lng, radius = 5000, days = 7 } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({ error: 'Latitude and longitude are required' });
+    }
+
+    const radiusInMeters = Math.min(Number(radius), 15000);
+    const radiusInRadians = radiusInMeters / 6378100;
+
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - Number(days));
+
+    const query = {
+      location: {
+        $geoWithin: {
+          $centerSphere: [[Number(lng), Number(lat)], radiusInRadians]
+        }
+      },
+      timeOfIncident: { $gte: daysAgo }
+    };
+
+    const count = await Incident.countDocuments(query);
+    res.json({ count });
+  } catch (error) {
+    console.error('Error counting incidents:', error);
+    res.status(500).json({ error: 'Server error counting incidents' });
+  }
+});
+
 // POST /api/incidents
 router.post('/', auth, async (req, res) => {
   try {

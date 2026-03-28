@@ -20,11 +20,14 @@ export function haversineDistance(lat1, lng1, lat2, lng2) {
   return R * c; // Distance in meters
 }
 
-export async function fetchRoutes(originLat, originLng, destLat, destLng) {
+export async function fetchRoutes(originLat, originLng, destLat, destLng, transportMode = 'walking') {
   try {
     // OSRM coordinates are formatted as {longitude},{latitude}
+    // Multiplex profile between driving algorithms vs pedestrian pathways
+    const profile = ['auto', 'cab', 'bus'].includes(transportMode) ? 'driving' : 'foot';
+    
     // Force up to 3 alternatives to completely bypass aggressive merging
-    const url = `https://router.project-osrm.org/route/v1/foot/${originLng},${originLat};${destLng},${destLat}?alternatives=3&overview=full&geometries=geojson&steps=false`;
+    const url = `https://router.project-osrm.org/route/v1/${profile}/${originLng},${originLat};${destLng},${destLat}?alternatives=3&overview=full&geometries=geojson&steps=false`;
     const response = await axios.get(url);
     
     if (!response.data || !response.data.routes) return [];
@@ -45,112 +48,210 @@ export async function fetchRoutes(originLat, originLng, destLat, destLng) {
   }
 }
 
-export function scoreRouteSafety(routeCoordinates, incidents) {
-  let score = 100;
-  let nearbyIncidentsCount = 0;
+/*
+ * SafeRoute Dynamic Risk Engine (ML-Proxy)
+ * 
+ * This scoring system algorithmically mimics machine-learning contextual evaluations by
+ * applying independent risk-vector polynomials against 6 explicitly defensible parameters.
+ * 
+ * FACTOR 1 — Perception Density (40%): Aggregates and averages the psychological safetyScore (1-10) of localized incidents.
+ * FACTOR 2 — Recency Score (20%): Time-decay weighting favoring incidents logged <24hrs (4.0x) vs older (0.8x).
+ * FACTOR 3 — Transport Mode Risk Multiplier (15%): Exposure modifiers grading 'walking' (1.4x) to 'cab' (0.6x).
+ * FACTOR 4 — Temporal Ambient Risk (15%): Heuristic mapping of natural daylight/nighttime threat profiles.
+ * FACTOR 5 — Incident Volume (5%): Density per localized kilometer (Capped at 10/km).
+ * FACTOR 6 — Safe Zone Reducers (5%): Proximity discounting for structural safety (Police, Hospitals).
+ * 
+ * All factors sum towards a maximum Risk ceiling (1.0).
+ * Final Safety Score = Math.round((1 - Total Risk) * 100)
+ */
+
+export function calculateDynamicRiskScore(routeCoordinates, incidents, options = {}) {
+  const { 
+    transportMode = 'walking', 
+    currentHour = new Date().getHours() 
+  } = options;
+
+  let nearbyIncidents = [];
   let nearbySafeZonesCount = 0;
-  
-  const currentHour = new Date().getHours();
-  // Daytime considered 6:00 AM to 5:59 PM
-  const isDaytime = currentHour >= 6 && currentHour < 18;
 
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  
-  // Track incidents we've already counted so we don't multiply deductions for the same incident
+  // 1) Find nearby incidents & safe zones
   const countedIncidents = new Set();
-
-  for (const incident of incidents) {
-    if (!incident.location || !incident.location.coordinates) continue;
-    
-    // GeoJSON [lng, lat]
-    const incLng = incident.location.coordinates[0];
-    const incLat = incident.location.coordinates[1];
-    const incDate = new Date(incident.reportedAt);
-
-    let isNearRoute = false;
-    
-    // Check if incident is within 300m of ANY point on the route
-    // (Optimization: we step by 3 coordinate pairs to significantly speed this up)
-    for (let i = 0; i < routeCoordinates.length; i += 3) {
-      const [rLat, rLng] = routeCoordinates[i];
-      if (haversineDistance(rLat, rLng, incLat, incLng) <= 300) {
-        isNearRoute = true;
-        break;
-      }
-    }
-
-    if (isNearRoute && !countedIncidents.has(incident._id)) {
-      countedIncidents.add(incident._id);
-      nearbyIncidentsCount++;
-      
-      let deduction = incident.severity * 8;
-      
-      // Amplifiers
-      if (incDate > sevenDaysAgo) deduction *= 2;
-      if (incident.timeOfDay === 'night' || incident.timeOfDay === 'evening') deduction *= 1.5;
-      
-      // Bonus: daytime is safer
-      if (isDaytime) deduction *= 0.5;
-      
-      score -= deduction;
-    }
-  }
-
-  // Iterate exactly against hardcoded safe zones in Chandigarh
   const countedSafeZones = new Set();
-  for (const zone of safeZones) {
-    let isNearRoute = false;
-    // Step by 3 arrays to massively improve raycasting performance
-    for (let i = 0; i < routeCoordinates.length; i += 3) {
-      const [rLat, rLng] = routeCoordinates[i];
-      if (haversineDistance(rLat, rLng, zone.lat, zone.lng) <= 500) {
-        isNearRoute = true;
-        break;
+  
+  for (let i = 0; i < routeCoordinates.length; i += 3) {
+    const rLat = routeCoordinates[i][0];
+    const rLng = routeCoordinates[i][1];
+
+    for (const incident of incidents) {
+      if (!incident.location || !incident.location.coordinates) continue;
+      const incLng = incident.location.coordinates[0];
+      const incLat = incident.location.coordinates[1];
+      
+      if (!countedIncidents.has(incident._id) && haversineDistance(rLat, rLng, incLat, incLng) <= 300) {
+        countedIncidents.add(incident._id);
+        nearbyIncidents.push(incident);
       }
     }
-    
-    if (isNearRoute && !countedSafeZones.has(zone.name)) {
-      countedSafeZones.add(zone.name);
-      nearbySafeZonesCount++;
+
+    for (const zone of safeZones) {
+      if (!countedSafeZones.has(zone.name) && haversineDistance(rLat, rLng, zone.lat, zone.lng) <= 500) {
+        countedSafeZones.add(zone.name);
+        nearbySafeZonesCount++;
+      }
     }
   }
 
-  // Calculate Safe Zone bonuses
-  const safeZoneBonus = Math.min(20, nearbySafeZonesCount * 8);
-  score += safeZoneBonus;
+  // Calculate route physical length
+  let routeLengthMeters = 0;
+  for (let i = 0; i < routeCoordinates.length - 1; i++) {
+    routeLengthMeters += haversineDistance(routeCoordinates[i][0], routeCoordinates[i][1], routeCoordinates[i+1][0], routeCoordinates[i+1][1]);
+  }
+  const routeLengthKm = Math.max(0.1, routeLengthMeters / 1000);
 
-  score = Math.max(0, Math.min(100, Math.round(score)));
+  // FACTOR 1: Perception Density Score (40%)
+  let factor1 = 0;
+  let avgSafetyScore = 10;
+  let highPerceptionCount = 0; // safetyScore 1-3
   
+  if (nearbyIncidents.length > 0) {
+    const sumScores = nearbyIncidents.reduce((sum, inc) => {
+      const s = inc.safetyScore || 5; // fallback for legacy data
+      if (s <= 3) highPerceptionCount++;
+      return sum + s;
+    }, 0);
+    avgSafetyScore = sumScores / nearbyIncidents.length;
+    let riskFromPerception = (11 - avgSafetyScore) / 10;
+    factor1 = riskFromPerception * 0.40;
+  }
+
+  // FACTOR 2: Recency Score (20%)
+  let factor2 = 0;
+  let avgRecencyWeight = 0;
+  
+  if (nearbyIncidents.length > 0) {
+    const now = new Date();
+    const sumWeights = nearbyIncidents.reduce((sum, inc) => {
+      const incDate = new Date(inc.timeOfIncident || inc.reportedAt || now);
+      const diffHrs = Math.max(0, (now - incDate) / (1000 * 60 * 60));
+      
+      let pWeight = 0.8;
+      if (diffHrs <= 24) pWeight = 4.0;
+      else if (diffHrs <= 24 * 7) pWeight = 2.5;
+      else if (diffHrs <= 120 * 24) pWeight = 1.5; // Roughly expanding 30 days due to demo seed data bounds
+      return sum + pWeight;
+    }, 0);
+    
+    avgRecencyWeight = sumWeights / nearbyIncidents.length;
+    // Normalize: min 0.8, max 4.0
+    let normalizedRecency = (avgRecencyWeight - 0.8) / 3.2; 
+    factor2 = Math.max(0, Math.min(1, normalizedRecency)) * 0.20;
+  }
+
+  // FACTOR 3: Transport Mode Risk Multiplier (15%)
+  const multipliers = { walking: 1.4, bike: 1.2, auto: 0.9, bus: 0.8, cab: 0.6 };
+  const modeMultiplier = multipliers[transportMode] || 1.4;
+  let factor3 = ((modeMultiplier - 0.6) / 0.8) * 0.15;
+
+  // FACTOR 4: Time of Day Risk (15%)
+  let timeRisk = 0.25; 
+  if (currentHour >= 0 && currentHour <= 4) timeRisk = 0.95;
+  else if (currentHour >= 5 && currentHour <= 6) timeRisk = 0.75;
+  else if (currentHour >= 7 && currentHour <= 19) timeRisk = 0.25;
+  else if (currentHour >= 20 && currentHour <= 21) timeRisk = 0.55;
+  else if (currentHour >= 22 && currentHour <= 23) timeRisk = 0.80;
+  let factor4 = timeRisk * 0.15;
+
+  // FACTOR 5: Incident Volume Score (5%)
+  let incidentDensity = nearbyIncidents.length / routeLengthKm;
+  let factor5 = Math.min(incidentDensity / 10, 1) * 0.05;
+
+  // FACTOR 6: Safe Zone Proximity Bonus (5% - REDUCES RISK)
+  let factor6 = -Math.min(nearbySafeZonesCount * 0.02, 0.05);
+
+  // Tally and Normalize
+  let totalRisk = factor1 + factor2 + factor3 + factor4 + factor5 + factor6;
+  totalRisk = Math.max(0, Math.min(1, totalRisk));
+  
+  let score = Math.round((1 - totalRisk) * 100);
+
   let label = 'Caution';
   if (score >= 75) label = 'Safe';
   else if (score >= 50) label = 'Moderate';
 
-  return { score, nearbyIncidents: nearbyIncidentsCount, nearbySafeZones: nearbySafeZonesCount, label };
+  return { 
+    totalScore: score, 
+    label,
+    factors: {
+      perceptionScore: Number(factor1.toFixed(2)),
+      recencyScore: Number(factor2.toFixed(2)),
+      transportRisk: Number(factor3.toFixed(2)),
+      timeRisk: Number(factor4.toFixed(2)),
+      incidentDensity: Number(factor5.toFixed(2)),
+      safeZoneBonus: Number(factor6.toFixed(2))
+    },
+    nearbyIncidents: nearbyIncidents.length, 
+    safeZonesNearby: nearbySafeZonesCount, 
+    highPerceptionCount,
+    avgRecencyWeight,
+    routeLengthKm
+  };
 }
 
-export function selectBestRoutes(routes, incidents) {
+export function breakTie(routeA, routeB, options = {}) {
+  // Tiebreaker 1: More safe zones
+  if (routeA.safeZonesNearby !== routeB.safeZonesNearby) {
+    if (routeA.safeZonesNearby > routeB.safeZonesNearby) return { ...routeA, tiebreakReason: `Chosen: passes ${routeA.safeZonesNearby} safe zones` };
+    return { ...routeB, tiebreakReason: `Chosen: passes ${routeB.safeZonesNearby} safe zones` };
+  }
+
+  // Tiebreaker 2: Fewer HIGH-perception incidents (safetyScore 1-3)
+  if (routeA.highPerceptionCount !== routeB.highPerceptionCount) {
+    if (routeA.highPerceptionCount < routeB.highPerceptionCount) return { ...routeA, tiebreakReason: "Chosen: fewer severe incidents" };
+    return { ...routeB, tiebreakReason: "Chosen: fewer severe incidents" };
+  }
+
+  // Tiebreaker 3: Shorter distance
+  if (routeA.routeLengthKm !== routeB.routeLengthKm) {
+    if (routeA.routeLengthKm < routeB.routeLengthKm) return { ...routeA, tiebreakReason: "Chosen: shorter exposed distance" };
+    return { ...routeB, tiebreakReason: "Chosen: shorter exposed distance" };
+  }
+
+  // Tiebreaker 4: Fresher data
+  if (routeA.avgRecencyWeight !== routeB.avgRecencyWeight) {
+    if (routeA.avgRecencyWeight > routeB.avgRecencyWeight) return { ...routeA, tiebreakReason: "Chosen: fresher community data" };
+    return { ...routeB, tiebreakReason: "Chosen: fresher community data" };
+  }
+
+  return { ...routeA, tiebreakReason: "Chosen: algorithmically equivalent baseline" };
+}
+
+export function selectBestRoutes(routes, incidents, options = {}) {
   if (!routes || routes.length === 0) return { safeRoute: null, fastestRoute: null };
 
   const scoredRoutes = routes.map(route => {
-    const safety = scoreRouteSafety(route.coordinates, incidents);
-    return { ...route, ...safety };
+    const safety = calculateDynamicRiskScore(route.coordinates, incidents, options);
+    return { ...route, ...safety, tiebreakReason: null };
   });
 
-  // Fastest Route -> Sort by pure duration ascending (Always included even if score is poor)
   const durationSorted = [...scoredRoutes].sort((a, b) => a.durationMinutes - b.durationMinutes);
   let fastestRoute = durationSorted[0];
 
-  // Safe Route -> Sort by purely safety score descending
-  const safetySorted = [...scoredRoutes].sort((a, b) => b.score - a.score);
+  const safetySorted = [...scoredRoutes].sort((a, b) => b.totalScore - a.totalScore);
   let safeRoute = safetySorted[0];
 
-  // Make sure we present distinct choices to the user if alternatives exist.
-  // If the absolute safest route is ALSO the absolute fastest, let's expose the 
-  // secondary fastest alternative as the "Fastest" route, to guarantee visual distinction.
+  // Evaluate Deep Tiebreaker Logic
+  if (safetySorted.length > 1) {
+    const r1 = safetySorted[0];
+    const r2 = safetySorted[1];
+    
+    if (Math.abs(r1.totalScore - r2.totalScore) <= 5) {
+      safeRoute = breakTie(r1, r2, options);
+    }
+  }
+
   if (safeRoute.rawRoute === fastestRoute.rawRoute && durationSorted.length > 1) {
     fastestRoute = durationSorted[1];
   }
 
-  return { safeRoute, fastestRoute };
+  return { safeRoute, fastestRoute, tiebreakReason: safeRoute.tiebreakReason };
 }

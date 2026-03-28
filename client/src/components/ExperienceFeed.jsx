@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-export default function ExperienceFeed({ isOpen, onClose, originCoords, destCoords, onReport }) {
+export default function ExperienceFeed({ isOpen, onClose, originCoords, destCoords, onReport, routeContext }) {
   const [experiences, setExperiences] = useState([]);
   const [loading, setLoading] = useState(false);
   
@@ -69,9 +69,17 @@ export default function ExperienceFeed({ isOpen, onClose, originCoords, destCoor
       flexDirection: 'column',
       boxShadow: isOpen ? '-4px 0 20px rgba(0,0,0,0.5)' : 'none'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 20px 8px' }}>
         <h2 style={{ color: 'white', margin: 0, fontSize: '18px' }}>Route Experiences</h2>
         <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94A3B8', fontSize: '24px', cursor: 'pointer' }}>×</button>
+      </div>
+      
+      <div style={{ padding: '0 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#94A3B8', fontSize: '12px', lineHeight: 1.4 }}>
+        {routeContext ? (
+          <span>📍 Along route:<br/> <strong style={{color:'white'}}>{routeContext.origin}</strong> to <strong style={{color:'white'}}>{routeContext.destination}</strong></span>
+        ) : (
+          <span>📍 Near your current location</span>
+        )}
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>

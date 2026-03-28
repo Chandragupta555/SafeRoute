@@ -22,6 +22,8 @@ export default function MapPage() {
   const [userPosition, setUserPosition] = useState(null);
   const [originCoords, setOriginCoords] = useState(null); // null = GPS
   const [destinationCoords, setDestinationCoords] = useState(null);
+  const [routeContext, setRouteContext] = useState(null); // tracks readable location strings
+  const [transportMode, setTransportMode] = useState('walking');
   const [incidents, setIncidents] = useState([]);
   const [selectedTimeOfDay, setSelectedTimeOfDay] = useState(() => getCategoryFromHour(new Date().getHours()));
   const [isNightMode, setIsNightMode] = useState(false);
@@ -72,16 +74,18 @@ export default function MapPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleRouteSearch = async ({ originCoords: reqOrigin, destCoords: reqDest }) => {
+  const handleRouteSearch = async ({ originCoords: reqOrigin, destCoords: reqDest, originText, destText, transportMode: selectedMode }) => {
     setOriginCoords(reqOrigin);
     setDestinationCoords(reqDest);
+    setTransportMode(selectedMode);
     setSelectedRoute(null);
+    setRouteContext({ origin: originText, destination: destText });
 
     const actualOrigin = reqOrigin || (userPosition ? { lat: userPosition[0], lng: userPosition[1] } : { lat: 30.7333, lng: 76.7794 });
-    await fetchAndDisplayRoutes(actualOrigin.lat, actualOrigin.lng, reqDest.lat, reqDest.lng);
+    await fetchAndDisplayRoutes(actualOrigin.lat, actualOrigin.lng, reqDest.lat, reqDest.lng, selectedMode);
   };
 
-  const fetchAndDisplayRoutes = async (originLat, originLng, destLat, destLng) => {
+  const fetchAndDisplayRoutes = async (originLat, originLng, destLat, destLng, mode) => {
     setIsLoading(true);
     try {
       let fetchedIncidents = [];
@@ -91,13 +95,14 @@ export default function MapPage() {
       } catch (incErr) {
         console.error('Incidents API failed, falling back to empty array so routing continues:', incErr);
       }
-      
+
       setIncidents(fetchedIncidents);
-      const fetchedRoutes = await fetchRoutes(originLat, originLng, destLat, destLng);
+      const fetchedRoutes = await fetchRoutes(originLat, originLng, destLat, destLng, mode);
       setRawRoutes(fetchedRoutes);
-      
+
       const currentFiltered = fetchedIncidents.filter(inc => inc.timeOfDay === selectedTimeOfDay);
-      const { safeRoute, fastestRoute } = selectBestRoutes(fetchedRoutes, currentFiltered);
+      const options = { transportMode: mode, currentHour: new Date().getHours() };
+      const { safeRoute, fastestRoute } = selectBestRoutes(fetchedRoutes, currentFiltered, options);
       setRoutes({ safeRoute, fastestRoute });
       setIsRoutePanelOpen(true);
     } catch (err) { console.error('Error fetching system logic:', err); } finally { setIsLoading(false); }
@@ -111,12 +116,12 @@ export default function MapPage() {
     let boundsToFit = null;
     if (selectedRoute) {
       const isSafe = selectedRoute.type === 'safe';
-      
+
       if (isSafe) {
         selectedLineRef.current = L.polyline(selectedRoute.coordinates, {
           color: '#9B59B6', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round', dashArray: null
         }).addTo(mapInstance);
-        
+
         glowLineRef.current = L.polyline(selectedRoute.coordinates, {
           color: '#E8A4C0', weight: 2, opacity: 0.7, dashArray: null
         }).addTo(mapInstance);
@@ -125,7 +130,7 @@ export default function MapPage() {
           color: '#475569', weight: 4, opacity: 0.6, dashArray: '8 6', lineCap: 'round'
         }).addTo(mapInstance);
       }
-      
+
       boundsToFit = selectedLineRef.current.getBounds();
     } else if (routes.safeRoute) {
       if (routes.fastestRoute) {
@@ -133,18 +138,18 @@ export default function MapPage() {
           color: '#475569', weight: 4, opacity: 0.6, dashArray: '8 6', lineCap: 'round'
         }).addTo(mapInstance);
       }
-      
+
       safeLineRef.current = L.polyline(routes.safeRoute.coordinates, {
         color: '#9B59B6', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round', dashArray: null
       }).addTo(mapInstance);
-      
+
       glowLineRef.current = L.polyline(routes.safeRoute.coordinates, {
         color: '#E8A4C0', weight: 2, opacity: 0.7, dashArray: null
       }).addTo(mapInstance);
 
       if (safeLineRef.current.bringToFront) safeLineRef.current.bringToFront();
       if (glowLineRef.current.bringToFront) glowLineRef.current.bringToFront();
-      
+
       boundsToFit = safeLineRef.current.getBounds();
     }
     if (boundsToFit) { mapInstance.fitBounds(boundsToFit, { padding: [60, 60] }); }
@@ -167,8 +172,9 @@ export default function MapPage() {
     recalculateTimeoutRef.current = setTimeout(() => {
       // Direct functional filter ensures we don't depend on continuous render references!
       const currentFiltered = incidents.filter(inc => inc.timeOfDay === selectedTimeOfDay);
-      const { safeRoute, fastestRoute } = selectBestRoutes(rawRoutes, currentFiltered);
-      
+      const options = { transportMode, currentHour: new Date().getHours() };
+      const { safeRoute, fastestRoute } = selectBestRoutes(rawRoutes, currentFiltered, options);
+
       setRoutes({ safeRoute, fastestRoute });
 
       // Automatically snap the user back to the RoutePanel preview so they see the shift natively!
@@ -177,7 +183,7 @@ export default function MapPage() {
     }, 500);
 
     return () => clearTimeout(recalculateTimeoutRef.current);
-  }, [selectedTimeOfDay, rawRoutes, incidents]);
+  }, [selectedTimeOfDay, rawRoutes, incidents, transportMode]);
 
   const handleTimeChange = (timeCategory) => {
     setSelectedTimeOfDay(timeCategory);
@@ -200,7 +206,7 @@ export default function MapPage() {
         <button onClick={() => navigate('/profile')} style={{ background: '#1A0A2E', border: '1px solid #6828B8', color: 'white', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>👤</button>
       </div>
 
-      {isNightMode && (
+      {/* {isNightMode && (
         <div style={{
           position: 'absolute',
           top: '150px',
@@ -217,7 +223,7 @@ export default function MapPage() {
         }}>
           Night Mode — Higher Risk Areas Active
         </div>
-      )}
+      )} */}
 
       {isNightMode && (
         <style>{`
@@ -232,13 +238,13 @@ export default function MapPage() {
       </div>
 
       {/* Floating Action Buttons */}
-      <div style={{ position: 'absolute', top: '250px', right: '16px', zIndex: 500, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <button 
+      <div style={{ position: 'absolute', top: '280px', right: '20px', zIndex: 500, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <button
           onClick={() => setIsExperienceFeedOpen(true)}
           style={{ background: '#1A0A2E', color: 'white', border: '1px solid #6828B8', padding: '10px 14px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', cursor: 'pointer', fontWeight: 'bold' }}>
           <span style={{ fontSize: '16px' }}>💬</span> Community Feed
         </button>
-        <button 
+        <button
           onClick={() => setIsQuickReportOpen(true)}
           style={{ background: '#1A0A2E', color: '#E8A4C0', border: '1px solid #E8A4C0', padding: '10px 14px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', cursor: 'pointer', fontWeight: 'bold' }}>
           <span style={{ fontSize: '16px' }}>⚠️</span> Report Vibe
@@ -247,25 +253,26 @@ export default function MapPage() {
 
       <TimeFilter onTimeChange={handleTimeChange} />
 
-      <QuickReport 
-        isOpen={isQuickReportOpen} 
-        onClose={() => setIsQuickReportOpen(false)} 
-        locationCoords={originCoords || { lat: userPosition?.[0] || 30.7333, lng: userPosition?.[1] || 76.7794 }} 
+      <QuickReport
+        isOpen={isQuickReportOpen}
+        onClose={() => setIsQuickReportOpen(false)}
+        locationCoords={originCoords || { lat: userPosition?.[0] || 30.7333, lng: userPosition?.[1] || 76.7794 }}
       />
-      
-      <ExperienceFeed 
-        isOpen={isExperienceFeedOpen} 
+
+      <ExperienceFeed
+        isOpen={isExperienceFeedOpen}
         onClose={() => setIsExperienceFeedOpen(false)}
         originCoords={originCoords || { lat: userPosition?.[0] || 30.7333, lng: userPosition?.[1] || 76.7794 }}
         destCoords={destinationCoords || { lat: 30.7333, lng: 76.7794 }}
         onReport={() => setIsQuickReportOpen(true)}
+        routeContext={routeContext}
       />
 
       {/* FIX: Use the logic-heavy SOS button component */}
       <SOSButton userPosition={userPosition} />
 
       {isRoutePanelOpen && (
-        <RoutePanel safeRoute={routes.safeRoute} fastestRoute={routes.fastestRoute} onSelectRoute={handleSelectRoute} onClose={() => setIsRoutePanelOpen(false)} />
+        <RoutePanel safeRoute={routes.safeRoute} fastestRoute={routes.fastestRoute} transportMode={transportMode} onSelectRoute={handleSelectRoute} onClose={() => setIsRoutePanelOpen(false)} />
       )}
     </div>
   );
