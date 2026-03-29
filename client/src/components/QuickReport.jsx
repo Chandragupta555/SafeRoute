@@ -98,10 +98,10 @@ export default function QuickReport({ isOpen, onClose, locationCoords }) {
 
   const modes = [
     { id: 'walking', icon: 'bi-person-walking', label: 'Walk' },
-    { id: 'bus',     icon: 'bi-bus-front',      label: 'Bus'  },
-    { id: 'auto',    icon: 'bi-taxi-front',     label: 'Auto' },
-    { id: 'cab',     icon: 'bi-car-front',      label: 'Cab'  },
-    { id: 'bike',    icon: 'bi-bicycle',        label: 'Bike' },
+    { id: 'bus', icon: 'bi-bus-front', label: 'Bus' },
+    { id: 'auto', icon: 'bi-taxi-front', label: 'Auto' },
+    { id: 'cab', icon: 'bi-car-front', label: 'Cab' },
+    { id: 'bike', icon: 'bi-bicycle', label: 'Bike' },
   ];
 
   return (

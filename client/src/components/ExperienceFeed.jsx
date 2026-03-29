@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import api from '../utils/api';
+import axios from 'axios';
 
 export default function ExperienceFeed({ isOpen, onClose, originCoords, destCoords, onReport, routeContext }) {
   const [experiences, setExperiences] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+
   // Transport Emoji mapping
   const modeIcons = {
     walking: '🚶',
@@ -35,13 +35,11 @@ export default function ExperienceFeed({ isOpen, onClose, originCoords, destCoor
       const fetchExp = async () => {
         setLoading(true);
         try {
-          const response = await api.get('/incidents/route-experiences', {
-            params: {
-              lat1: originCoords.lat,
-              lng1: originCoords.lng,
-              lat2: destCoords.lat,
-              lng2: destCoords.lng
-            }
+          const token = localStorage.getItem('token');
+          const url = `http://localhost:5000/api/incidents/route-experiences?lat1=${originCoords.lat}&lng1=${originCoords.lng}&lat2=${destCoords.lat}&lng2=${destCoords.lng}`;
+
+          const response = await axios.get(url, {
+            headers: { Authorization: `Bearer ${token}` }
           });
           setExperiences(response.data);
         } catch (error) {
@@ -75,10 +73,10 @@ export default function ExperienceFeed({ isOpen, onClose, originCoords, destCoor
         <h2 style={{ color: 'white', margin: 0, fontSize: '18px' }}>Route Experiences</h2>
         <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94A3B8', fontSize: '24px', cursor: 'pointer' }}>×</button>
       </div>
-      
+
       <div style={{ padding: '0 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#94A3B8', fontSize: '12px', lineHeight: 1.4 }}>
         {routeContext ? (
-          <span>📍 Along route:<br/> <strong style={{color:'white'}}>{routeContext.origin}</strong> to <strong style={{color:'white'}}>{routeContext.destination}</strong></span>
+          <span>📍 Along route:<br /> <strong style={{ color: 'white' }}>{routeContext.origin}</strong> to <strong style={{ color: 'white' }}>{routeContext.destination}</strong></span>
         ) : (
           <span>📍 Near your current location</span>
         )}
@@ -112,13 +110,13 @@ export default function ExperienceFeed({ isOpen, onClose, originCoords, destCoor
                 </div>
                 <span style={{ color: '#94A3B8', fontSize: '12px' }}>{timeAgo(exp.timeOfIncident)}</span>
               </div>
-              
+
               {exp.experienceText && (
                 <p style={{ color: 'white', fontSize: '14px', margin: '8px 0', lineHeight: 1.4, fontStyle: 'italic' }}>
                   "{exp.experienceText}"
                 </p>
               )}
-              
+
               <div style={{ color: '#E8A4C0', fontSize: '12px', marginTop: '8px', fontWeight: '600' }}>
                 {exp.isAnonymous ? 'Anonymous SafeRoute User' : 'Community Member'}
               </div>
