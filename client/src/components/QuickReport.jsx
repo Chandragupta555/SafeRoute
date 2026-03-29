@@ -45,7 +45,7 @@ export default function QuickReport({ isOpen, onClose, locationCoords }) {
         return;
       }
 
-      await axios.post('http://localhost:5000/api/incidents', payload, {
+      await axios.post('https://saferoute-hackmol.onrender.com/api/incidents', payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
