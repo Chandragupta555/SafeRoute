@@ -36,7 +36,7 @@ export default function ExperienceFeed({ isOpen, onClose, originCoords, destCoor
         setLoading(true);
         try {
           const token = localStorage.getItem('token');
-          const url = `https://saferoute-hackmol.onrender.com/api/incidents/route-experiences?lat1=${originCoords.lat}&lng1=${originCoords.lng}&lat2=${destCoords.lat}&lng2=${destCoords.lng}`;
+          const url = `http://localhost:5000/api/incidents/route-experiences?lat1=${originCoords.lat}&lng1=${originCoords.lng}&lat2=${destCoords.lat}&lng2=${destCoords.lng}`;
           
           const response = await axios.get(url, {
             headers: { Authorization: `Bearer ${token}` }
