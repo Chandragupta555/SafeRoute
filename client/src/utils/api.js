@@ -1,8 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  // Use absolute URL to avoid proxy issues during the demo
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+  baseURL: 'https://saferoute-hackmol.onrender.com/api' 
 });
 
 api.interceptors.request.use(config => {
