@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 
 export default function QuickReport({ isOpen, onClose, locationCoords }) {
   const [safetyScore, setSafetyScore] = useState(null);
@@ -45,9 +45,7 @@ export default function QuickReport({ isOpen, onClose, locationCoords }) {
         return;
       }
 
-      await axios.post('http://localhost:5000/api/incidents', payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.post('/incidents', payload);
 
       setShowSuccess(true);
       setTimeout(() => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 
 export default function ExperienceFeed({ isOpen, onClose, originCoords, destCoords, onReport, routeContext }) {
   const [experiences, setExperiences] = useState([]);
@@ -35,11 +35,13 @@ export default function ExperienceFeed({ isOpen, onClose, originCoords, destCoor
       const fetchExp = async () => {
         setLoading(true);
         try {
-          const token = localStorage.getItem('token');
-          const url = `http://localhost:5000/api/incidents/route-experiences?lat1=${originCoords.lat}&lng1=${originCoords.lng}&lat2=${destCoords.lat}&lng2=${destCoords.lng}`;
-          
-          const response = await axios.get(url, {
-            headers: { Authorization: `Bearer ${token}` }
+          const response = await api.get('/incidents/route-experiences', {
+            params: {
+              lat1: originCoords.lat,
+              lng1: originCoords.lng,
+              lat2: destCoords.lat,
+              lng2: destCoords.lng
+            }
           });
           setExperiences(response.data);
         } catch (error) {
